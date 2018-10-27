@@ -3,7 +3,7 @@
 """
 Created on Thu Oct 18 19:18:02 2018
 
-@author: gershow
+@author: Elizabeth Crawford
 """
 import numpy as np
 import matplotlib.pyplot as plt
@@ -44,7 +44,15 @@ def trajectory (x0,y0,v,theta,g = 9.8, npts = 1000):
     0.5g t^2 - vsin(theta) t - y0 = 0
     t_final = v/g sin(theta) + sqrt((v/g)^2 sin^2(theta) + 2 y0/g)
     """
-  
+    thetarad = np.radians(theta)
+    vx = v*np.cos(thetarad)
+    vy = v*np.sin(thetarad)
+    tfinal = ((vy/g) + (np.sqrt(((vy/g)**2)-(2*(y0/g)))))
+    t = np.linspace(0, tfinal, npts)
+    x = x0 + vx*t
+    y = y0 + vy*t - 0.5*g*(t**2)
+    
+    return (x,y)
 
 def firstInBox (x,y,box):
     """
@@ -65,9 +73,11 @@ def firstInBox (x,y,box):
         y[j] is in [bottom,top]
         -1 if the line x,y does not go through the box
     """
-
-
-    
+    for j in range (0,len(x)):
+        if box[0]<x[j]<box[1] and box[2]<y[j]<box[3]:
+            return j
+        else:
+            return -1
 
 def tankShot (targetBox, obstacleBox, x0, y0, v, theta, g = 9.8):
     """
@@ -96,7 +106,14 @@ def tankShot (targetBox, obstacleBox, x0, y0, v, theta, g = 9.8):
     obstacle box
     draws the truncated trajectory in current plot window
     """
-    
+    x,y = trajectory(x0,y0,v,theta,g = 9.8, npts = 1000)
+    x,y = endTrajectoryAtIntersection (x,y, obstacleBox)
+    plt.plot(x,y)
+    if firstInBox(x,y,targetBox)>=0:
+        hit=0
+    else:
+        hit=1
+    return hit
 
 
 def drawBoard (tank1box, tank2box, obstacleBox, playerNum):
@@ -115,7 +132,13 @@ def drawBoard (tank1box, tank2box, obstacleBox, playerNum):
  
     """    
     #your code here
-    
+    plt.clf()
+    drawBox(tank1box,tank1Color)
+    drawBox(tank2box,tank2Color)
+    drawBox(obstacleBox,obstacleColor)
+    plt.xlim(0,100)
+    plt.ylim(0,100)
+
     showWindow() #this makes the figure window show up
 
 def oneTurn (tank1box, tank2box, obstacleBox, playerNum, g = 9.8):   
@@ -142,9 +165,28 @@ def oneTurn (tank1box, tank2box, obstacleBox, playerNum, g = 9.8):
     prompts player for velocity and angle
     displays trajectory (shot originates from center of tank)
     returns 0 for miss, 1 or 2 for victory
-    """        
-
+    """
+    plt.clf()
+    drawBoard(tank1box, tank2box, obstacleBox, playerNum)
+    theta = getNumberInput('give us some sugar (an angle): ')
+    v = getNumberInput('give us some honey (a velocity): ')
     
+    if playerNum == 1:
+        x0 = np.average([tank1box[0], tank1box[1]])
+        y0 = np.average([tank1box[2], tank1box[3]])
+        targetBox = tank2box
+        
+    else:
+        x0 = np.average([tank2box[0], tank2box[1]])
+        y0 = np.average([tank2box[2], tank2box[3]])
+        targetBox = tank1box
+        
+    hit = tankShot (targetBox, obstacleBox, x0, y0, v, theta, g = 9.8)
+    
+    if hit == 1:
+        return playerNum
+    else:
+        return 0
 
 def playGame(tank1box, tank2box, obstacleBox, g = 9.8):
     """
@@ -161,9 +203,21 @@ def playGame(tank1box, tank2box, obstacleBox, g = 9.8):
      g : float 
         accel due to gravity (default 9.8)
     """
-    
-    
+    playerNum = 1
+    win = oneTurn(tank1box, tank2box, obstacleBox, playerNum, g = 9.8)
+    if win != 1:
+        print('you! missed! sir!')
+        input('click enter to continue playing!')
+        playerNum = 3-playerNum
+        #thanks aashish!
+        main()
+    if win == 1:
+        print('Every 1s a Winner by Hot Chocolate (1978), including you, player ' + str(playerNum))
+        input('click enter to continue playing!')
+        playerNum = 3-playerNum
+        main()
         
+    
 ##### functions provided to you #####
 def getNumberInput (prompt, validRange = [-np.Inf, np.Inf]):
     """displays prompt and converts user input to a number
@@ -249,7 +303,11 @@ def main():
     tank2box = [90,95,0,5]
     obstacleBox = [40,60,0,50]
     playGame(tank1box, tank2box, obstacleBox)
-    
+    trajectory (x0,y0,v,theta,g = 9.8, npts = 1000)
+    drawBoard (tank1box, tank2box, obstacleBox, playerNum)
+    tankShot (targetBox, obstacleBox, x0, y0, v, theta, g = 9.8)
+    showWindow()
+    endTrajectoryAtIntersection (x,y,box)
 
 #don't edit the lines below;
 if __name__== "__main__":
